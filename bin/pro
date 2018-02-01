@@ -1,5 +1,6 @@
 #! /usr/bin/env node
 
+ var fs = require('fs');
  var { exec } = require('child_process');
  var program =  require('commander');
  var inquirer = require('inquirer');
@@ -7,19 +8,25 @@
  var _ = require('lodash');
  var download = require('download');
 
+ var {processRange} = require('../utils/processValue.js');
+
+
+
+
 
  /*
  创建 init 命令
  使用:  pro init 项目名称  --sass  -o 其他
  **/
  program
- .command('init [proName]')
+ .command('init [proName]')//command 内部如果传递了 description 参数,那么就不能用 action 了, 否则报错.
  .alias('ini')
  .description('项目初始化')
  .option('--sass', 'sass 预处理器') // sass: true
  .option('--less', 'less 预处理器') // less: true
  .option('-o, --other [value]', '其他参数')// -o  --other 作用一样, 但是 action 中的 options 会按照 other 处理
  .option('-i, --integer <n>', 'An integer argument', parseInt) // integer: n, 参数转换成整数
+  .option('-r, --range <start>..<end>', '范围', processRange) // range: [start, end]
  .action((proName, options)=> {
    var config = _.extend({
      proName: '',
@@ -64,7 +71,17 @@
 
      //之前的输入和 inquirer的输入进行合并, 得到完整的参数
      var allCfg = _.extend(config, answers);
-     console.log(allCfg);
+     // console.log(allCfg);
+
+
+     //下载并解压
+     download('https://github.com/YS-FE/vvue/archive/master.zip', '.', {extract: true}).then((data) => {
+       var dir = data[0].path;
+       dir = dir.slice(0, dir.length - 1); //得到下载的目录名称
+       fs.renameSync(dir, allCfg.proName);
+       console.log(chalk.green(' 项目创建成功'));
+     })
+
    })
 
  })
@@ -75,33 +92,9 @@
 
 
  /*
- 创建 download 命令
- 使用: pro download
- **/
-
- function processRange(value) {
-   return value.split('..').map(Number);
- }
-
  program
- .command('download') //command 内部如果传递了 description 参数,那么就不能用 action 了, 否则报错.
- .description('下载')
- .option('-r, --range <start>..<end>', '范围', processRange) // range: [start, end]
- .action((options) => {
-
-   //下载并解压
-   download('https://github.com/YS-FE/vvue/archive/master.zip', '.', {extract: true}).then((data) => {
-     var dir = data[0].path;
-     dir = dir.slice(0, dir.length - 1)
-
-     exec(`mv ${dir}/*  .  && rm -rf ${dir}`, function(err, stdout, stderr){
-       if (err){
-         throw err
-       }
-     })
-     console.log(chalk.green('下载成功!'));
-   })
- })
+ .command()...创建其他命令
+ **/
 
 
  program.parse(process.argv);
